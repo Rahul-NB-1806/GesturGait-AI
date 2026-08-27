@@ -1,0 +1,44 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# AI Coding & Skills
+AI-skills/
+.opencode/
+.claude/
+AGENTS.md
+CLAUDE.md
+plans.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ML Models & Data
+*.h5
+*.hdf5
+*.tflite
+*.onnx
+*.pkl
+*.joblib
+data/
+models/
+
+# Backend secrets
+backend/.env

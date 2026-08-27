@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">GesturGait AI</string>
+    <string name="accessibility_service_description">Captures anonymized touch and gesture timing data for neurological screening. No text content or screen data is collected.</string>
+</resources>
