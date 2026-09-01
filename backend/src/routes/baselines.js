@@ -13,17 +13,20 @@ const FEATURE_KEYS = [
 
 router.get('/:userId', authenticate, async (req, res) => {
   try {
-    const baseline = await Baseline.findOne({ userId: req.params.userId });
+    const userId = req.params.userId;
+    const baseline = await Baseline.findOne({ userId });
     if (baseline) {
       return res.json(baseline);
     }
 
-    const user = await User.findById(req.params.userId);
+    const user = await User.findOne({ patientId: userId });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      // Try by MongoDB ID as fallback
+      const userById = await User.findById(userId).catch(() => null);
+      if (!userById) return res.status(404).json({ message: 'User not found' });
     }
 
-    const firstWindow = await FeatureWindow.findOne({ userId: req.params.userId })
+    const firstWindow = await FeatureWindow.findOne({ userId })
       .sort({ timestamp: 1 });
     if (!firstWindow) {
       return res.json({
@@ -86,7 +89,10 @@ router.post('/:userId/recalculate', authenticate, async (req, res) => {
       { upsert: true, new: true }
     );
 
-    await User.findByIdAndUpdate(req.params.userId, { baselineEstablished: true });
+    await User.findOneAndUpdate(
+      { patientId: req.params.userId },
+      { baselineEstablished: true }
+    );
 
     res.json(baseline);
   } catch (err) {

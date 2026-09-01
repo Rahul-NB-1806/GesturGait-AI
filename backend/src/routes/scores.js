@@ -6,6 +6,12 @@ const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
+const FEATURE_KEYS = [
+  'stepCount', 'avgStepTime', 'peakFrequency',
+  'tremorFrequency', 'movementStability',
+  'swipeSpeed', 'tapInterval', 'gestureDurationVariance'
+];
+
 // Sync daily score from mobile app
 router.post('/sync', async (req, res) => {
   try {
