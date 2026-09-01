@@ -40,5 +40,11 @@ build/
 data/
 models/
 
+# Node
+node_modules/
+
+# Logs
+*.log
+
 # Backend secrets
 backend/.env
