@@ -1,6 +1,9 @@
 package com.example.gesturgaitai.sensor
 
+import android.util.Log
 import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 data class SensorFeatures(
@@ -13,8 +16,13 @@ data class SensorFeatures(
 
 object SensorFeatureExtractor {
 
+    private const val TAG = "GesturGaitFeatures"
+
     fun extract(samples: List<SensorSample>): SensorFeatures {
-        if (samples.size < 10) return SensorFeatures()
+        if (samples.size < 10) {
+            Log.w(TAG, "[GesturGaitFeatures] WARNING: Motion sensor data insufficient (samples=${samples.size})")
+            return SensorFeatures()
+        }
 
         val magnitudes = samples.map { s ->
             sqrt((s.ax * s.ax + s.ay * s.ay + s.az * s.az).toDouble())
@@ -30,13 +38,23 @@ object SensorFeatureExtractor {
         val tremorFreq = computeTremorFrequency(gravities)
         val stability = computeStability(magnitudes)
 
-        return SensorFeatures(
+        val features = SensorFeatures(
             stepCount = steps,
             avgStepTime = avgStepTime,
             peakFrequency = peakFreq,
             tremorFrequency = tremorFreq,
             movementStability = stability
         )
+
+        Log.d(TAG, "========== GESTURGAIT MOTION WINDOW ==========")
+        Log.d(TAG, "stepCount: ${features.stepCount}")
+        Log.d(TAG, "avgStepTime: ${"%.2f".format(features.avgStepTime)}")
+        Log.d(TAG, "peakFreq: ${"%.2f".format(features.peakFrequency)}")
+        Log.d(TAG, "tremorFreq: ${"%.2f".format(features.tremorFrequency)}")
+        Log.d(TAG, "stability: ${"%.2f".format(features.movementStability)}")
+        Log.d(TAG, "===============================================")
+
+        return features
     }
 
     private fun detectSteps(magnitudes: List<Double>): Int {

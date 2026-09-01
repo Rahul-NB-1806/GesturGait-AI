@@ -1,5 +1,6 @@
 package com.example.gesturgaitai.service
 
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import kotlin.math.abs
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -13,6 +14,8 @@ data class AccessibilityFeatureWindow(
 )
 
 object AccessibilityFeatureExtractor {
+
+    private const val TAG = "GesturGaitFeatures"
 
     private data class TouchEvent(
         val timestamp: Long,
@@ -50,10 +53,13 @@ object AccessibilityFeatureExtractor {
                 lastTapTime = now
             }
             AccessibilityEvent.TYPE_TOUCH_INTERACTION_END -> {
-                val tapGap = now - lastTapTime
-                if (tapGap > 300) {
-                    lastSwipeStartTime = lastTapTime
+                val duration = now - lastTapTime
+                if (duration < 300) {
+                    Log.v(TAG, "Screen Sensor: Tap detected (${duration}ms)")
+                } else {
                     swipeCount++
+                    Log.v(TAG, "Screen Sensor: Swipe/Long-press detected (${duration}ms)")
+                    lastSwipeStartTime = lastTapTime
                 }
             }
             AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
@@ -71,7 +77,16 @@ object AccessibilityFeatureExtractor {
         if (windowElapsed >= WINDOW_MS) {
             val window = computeWindow()
             if (window.tapCount > 0 || window.swipeSpeed > 0) {
+                Log.d(TAG, "========== GESTURGAIT ACCESSIBILITY WINDOW ==========")
+                Log.d(TAG, "swipeSpeed: ${"%.2f".format(window.swipeSpeed)}")
+                Log.d(TAG, "tapInterval: ${"%.2f".format(window.tapInterval)}")
+                Log.d(TAG, "gestureVar: ${"%.2f".format(window.gestureDurationVariance)}")
+                Log.d(TAG, "tapCount: ${window.tapCount}")
+                Log.d(TAG, "scrollDistance: ${"%.2f".format(window.scrollDistance)}")
+                Log.d(TAG, "======================================================")
                 onWindowReady?.invoke(window)
+            } else {
+                Log.d(TAG, "[GesturGaitFeatures] WARNING: No accessibility events in current window")
             }
             lastWindowTime = now
             gestureDurations.clear()

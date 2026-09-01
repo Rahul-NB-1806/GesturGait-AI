@@ -1,6 +1,7 @@
 package com.example.gesturgaitai.core
 
 import android.content.Context
+import android.util.Log
 import org.tensorflow.lite.Interpreter
 import java.io.File
 import java.io.FileInputStream
@@ -8,6 +9,7 @@ import java.nio.channels.FileChannel
 
 object InferenceEngine {
 
+    private const val TAG = "GesturGaitFeatures"
     private const val TFLITE_MODEL = "model.tflite"
     private var interpreter: Interpreter? = null
     private var tfliteAvailable = false
@@ -49,15 +51,27 @@ object InferenceEngine {
         baseline: Baseline,
         windows: List<UnifiedFeatureWindow>
     ): InferenceResult {
-        if (tfliteAvailable && interpreter != null && windows.isNotEmpty()) {
+        Log.d(TAG, "[GesturGaitFeatures] Unified feature processing started (windowCount=${windows.size})")
+        
+        val result = if (tfliteAvailable && interpreter != null && windows.isNotEmpty()) {
             try {
-                return runTFLite(baseline, windows)
+                runTFLite(baseline, windows)
             } catch (e: Exception) {
-                // Fall through to statistical
+                Log.e(TAG, "TFLite inference failed: ${e.message}")
+                runStatistical(baseline, windows)
             }
+        } else {
+            runStatistical(baseline, windows)
         }
 
-        return runStatistical(baseline, windows)
+        Log.i(TAG, "========== GESTURGAIT INFERENCE RESULT ==========")
+        Log.i(TAG, "Score: ${result.score}")
+        Log.i(TAG, "Confidence: ${"%.1f".format(result.confidence)}%")
+        Log.i(TAG, "Method: ${if (result.tfliteAvailable) "TFLite" else "Statistical"}")
+        Log.i(TAG, "Explanation: ${result.explanation}")
+        Log.i(TAG, "==================================================")
+
+        return result
     }
 
     private fun runStatistical(

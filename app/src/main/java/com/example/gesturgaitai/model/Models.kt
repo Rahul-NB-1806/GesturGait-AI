@@ -37,3 +37,15 @@ data class BaselineResponse(
     val daysRequired: Int?,
     val message: String?
 )
+
+data class AuthResponse(
+    val token: String?,
+    val user: User?,
+    val message: String?
+)
+
+data class User(
+    val _id: String,
+    val email: String,
+    val patientId: String
+)

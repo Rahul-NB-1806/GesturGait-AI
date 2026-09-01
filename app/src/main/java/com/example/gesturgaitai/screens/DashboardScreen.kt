@@ -1,67 +1,48 @@
 package com.example.gesturgaitai.screens
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.gesturgaitai.components.*
 import com.example.gesturgaitai.core.*
+import com.example.gesturgaitai.network.ApiClient
+import com.example.gesturgaitai.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen() {
-    val context = LocalContext.current
     val scrollState = rememberScrollState()
 
-    var inferenceResult by remember { mutableStateOf<InferenceEngine.InferenceResult?>(null) }
-    var baseline by remember { mutableStateOf<Baseline?>(null) }
+    var syncState by remember { mutableStateOf<SyncCoordinator.SyncState?>(null) }
     var loading by remember { mutableStateOf(true) }
     var trendView by remember { mutableStateOf("daily") }
-    var baselineDays by remember { mutableStateOf(0) }
 
-    fun runInference() {
-        val storedWindows = OfflineStorage.getWindows()
-        val dailyGroups = OfflineStorage.getWindowsGroupedByDay()
-        baselineDays = dailyGroups.size
-
-        val loaded = OfflineStorage.loadBaseline()
-
-        if (loaded != null) {
-            baseline = loaded
-            val todayStr = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-            val todayWindows = dailyGroups[todayStr] ?: emptyList()
-            val result = InferenceEngine.run(loaded, todayWindows)
-            inferenceResult = result
-
-            if (result.score > 0 && todayWindows.size >= 5) {
-                OfflineStorage.saveScore(
-                    OfflineStorage.StoredScore(
-                        score = result.score,
-                        confidence = result.confidence,
-                        explanation = result.explanation,
-                        recommendation = result.recommendation,
-                        timestamp = System.currentTimeMillis()
-                    )
-                )
-            }
-        } else if (dailyGroups.size >= 5) {
-            val allWindows = storedWindows
-            val newBaseline = AdaptiveBaseline.buildInitial(allWindows)
-            baseline = newBaseline
-            OfflineStorage.saveBaseline(newBaseline)
+    fun loadData() {
+        loading = true
+        SyncCoordinator.refresh { state ->
+            syncState = state
+            loading = false
         }
-        loading = false
     }
 
-    LaunchedEffect(Unit) { runInference() }
+    LaunchedEffect(Unit) { loadData() }
 
     val scores = OfflineStorage.getScores()
     val scoreValues = scores.map { it.score }
@@ -69,57 +50,83 @@ fun DashboardScreen() {
     val bestScore = if (scoreValues.isNotEmpty()) scoreValues.minOrNull() else null
     val worstScore = if (scoreValues.isNotEmpty()) scoreValues.maxOrNull() else null
 
-    val scoreValue = inferenceResult?.score
-    val confidence = inferenceResult?.confidence
-
-    val trendData: List<Pair<String, Int>> = when (trendView) {
-        "daily" -> scores.takeLast(7).map {
-            val sdf = SimpleDateFormat("EEE", Locale.US)
-            Pair(sdf.format(Date(it.timestamp)), it.score)
+    val dailyGroupsMap = syncState?.dailyGroups ?: emptyMap()
+    val stepTrendData: List<Pair<String, Int>> = when (trendView) {
+        "daily" -> {
+            val sortedDays = dailyGroupsMap.keys.sorted().takeLast(7)
+            sortedDays.map { day ->
+                val daySteps = dailyGroupsMap[day]?.sumOf { it.stepCount } ?: 0
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(day)
+                val label = date?.let { SimpleDateFormat("EEE", Locale.US).format(it) } ?: day
+                Pair(label, daySteps)
+            }
         }
         "weekly" -> {
-            val grouped = scores.groupBy {
-                val cal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                cal.get(Calendar.WEEK_OF_YEAR)
+            val weeklyMap = mutableMapOf<Int, Int>()
+            val cal = Calendar.getInstance()
+            for ((day, windows) in dailyGroupsMap) {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(day)
+                if (date != null) {
+                    cal.time = date
+                    val week = cal.get(Calendar.WEEK_OF_YEAR)
+                    weeklyMap[week] = (weeklyMap[week] ?: 0) + windows.sumOf { it.stepCount }
+                }
             }
-            grouped.map { (week, list) ->
-                Pair("W$week", list.map { it.score }.average().toInt())
-            }.takeLast(4)
+            weeklyMap.entries.sortedBy { it.key }.takeLast(4).map { (week, steps) ->
+                Pair("Week $week", steps)
+            }
         }
         else -> {
-            val grouped = scores.groupBy {
-                val cal = Calendar.getInstance().apply { timeInMillis = it.timestamp }
-                cal.get(Calendar.MONTH)
-            }
+            val monthlyMap = mutableMapOf<Int, Int>()
+            val cal = Calendar.getInstance()
             val months = listOf("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec")
-            grouped.map { (month, list) ->
-                Pair(months.getOrElse(month) { "$month" }, list.map { it.score }.average().toInt())
-            }.takeLast(6)
+            for ((day, windows) in dailyGroupsMap) {
+                val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(day)
+                if (date != null) {
+                    cal.time = date
+                    val month = cal.get(Calendar.MONTH)
+                    monthlyMap[month] = (monthlyMap[month] ?: 0) + windows.sumOf { it.stepCount }
+                }
+            }
+            monthlyMap.entries.sortedBy { it.key }.takeLast(6).map { (month, steps) ->
+                Pair(months.getOrElse(month) { "$month" }, steps)
+            }
         }
     }
 
+    val scoreValue = syncState?.inferenceResult?.score
+    val confidence = syncState?.inferenceResult?.confidence
+    val dailySteps = syncState?.dailySteps ?: 0
+    val baseline = syncState?.baseline
+    val baselineDays = syncState?.baselineDays ?: 0
+
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text("Dashboard", fontWeight = FontWeight.Bold) },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Overview",
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.5).sp,
+                        fontSize = 20.sp
+                    )
+                },
                 actions = {
-                    TextButton(onClick = { loading = true; runInference() }) {
-                        Text("Refresh")
+                    IconButton(onClick = { loadData() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color.Transparent,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                )
             )
         }
     ) { padding ->
         if (loading) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.height(8.dp))
-                    Text(text = if (baselineDays < 5) "Building baseline... Day $baselineDays of 5" else "Analyzing...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                CircularProgressIndicator(strokeWidth = 3.dp)
             }
             return@Scaffold
         }
@@ -128,83 +135,163 @@ fun DashboardScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 20.dp)
                 .verticalScroll(scrollState)
         ) {
             Spacer(Modifier.height(8.dp))
 
-            if (baseline == null && baselineDays < 5) {
-                BaselineProgress(
-                    daysCollected = baselineDays.coerceAtMost(7),
-                    daysRequired = 7
-                )
-            } else {
-                ScoreCard(
-                    score = scoreValue,
-                    explanation = inferenceResult?.explanation,
-                    recommendation = inferenceResult?.recommendation
-                )
+            // Main Risk Card
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                if (baseline == null && baselineDays < 5) {
+                    BaselineProgress(
+                        daysCollected = baselineDays.coerceAtMost(7),
+                        daysRequired = 7
+                    )
+                } else {
+                    ScoreCard(
+                        score = scoreValue,
+                        explanation = syncState?.inferenceResult?.explanation,
+                        recommendation = syncState?.inferenceResult?.recommendation
+                    )
+                }
             }
 
-            if (confidence != null && scoreValue != null) {
-                Text(
-                    text = "Confidence: ${confidence.toInt()}%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+            Spacer(Modifier.height(20.dp))
+
+            // Activity Section
+            Text(
+                "Activity",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+            )
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                GlassCard(modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.DirectionsWalk,
+                        contentDescription = null,
+                        tint = if (isSystemInDarkTheme()) Color(0xFF0A84FF) else Color(0xFF007AFF),
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "$dailySteps",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "Steps Today",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                GlassCard(modifier = Modifier.weight(1f)) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ShowChart,
+                        contentDescription = null,
+                        tint = Success,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = if (confidence != null) "${confidence.toInt()}%" else "--",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        "AI Confidence",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
+            Spacer(Modifier.height(24.dp))
+
+            // Trends
             PeriodToggle(selected = trendView, onSelect = { trendView = it })
 
-            if (trendData.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Text("Trend", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(Modifier.height(8.dp))
-                        trendData.forEachIndexed { i, (label, value) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("$value", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(12.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "Movement History",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(16.dp))
+                
+                if (stepTrendData.isNotEmpty()) {
+                    stepTrendData.forEach { (label, value) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    "$value",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    " steps",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(bottom = 2.dp, start = 4.dp)
+                                )
                             }
                         }
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
                     }
-                }
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surface
-                ) {
-                    Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                        Text("No trend data yet. Keep using the app.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                } else {
+                    Text(
+                        "No trend data yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
                 }
             }
 
+            Spacer(Modifier.height(24.dp))
+
+            // Stats Summary
             SummaryStats(avg = avgScore, best = bestScore, worst = worstScore)
 
-            val currentResult = inferenceResult
+            val currentResult = syncState?.inferenceResult
             if (currentResult?.deviations?.isNotEmpty() == true) {
-                DeviationList(
-                    deviations = currentResult.deviations.map {
-                        com.example.gesturgaitai.model.Deviation(
-                            feature = it.feature,
-                            deltaPercent = it.deltaPercent,
-                            direction = it.direction
-                        )
-                    }
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    "Clinical Insight",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
                 )
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    DeviationList(
+                        deviations = currentResult.deviations.map { dev ->
+                            com.example.gesturgaitai.model.Deviation(
+                                feature = dev.feature,
+                                deltaPercent = dev.deltaPercent,
+                                direction = dev.direction
+                            )
+                        }
+                    )
+                }
             }
 
-            Spacer(Modifier.height(80.dp))
+            Spacer(Modifier.height(40.dp))
         }
     }
 }

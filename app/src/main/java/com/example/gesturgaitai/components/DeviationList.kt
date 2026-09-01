@@ -19,10 +19,7 @@ fun DeviationList(
 ) {
     if (deviations.isNullOrEmpty()) return
 
-    Column(modifier = modifier.padding(vertical = 8.dp)) {
-        Text("Feature Deviations", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(8.dp))
-
+    Column(modifier = modifier) {
         deviations.forEachIndexed { i, d ->
             val isWorse = d.direction == "worse"
             val color = if (isWorse) Danger else Success

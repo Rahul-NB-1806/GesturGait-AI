@@ -1,20 +1,88 @@
 package com.example.gesturgaitai.core
 
 import android.content.Context
+import android.util.Log
+import com.example.gesturgaitai.network.ApiClient
 import org.json.JSONArray
 import org.json.JSONObject
 
 object OfflineStorage {
 
+    private const val TAG = "GesturGaitFeatures"
     private const val WINDOWS_FILE = "feature_windows.json"
     private const val BASELINE_FILE = "baseline.json"
     private const val SCORES_FILE = "scores.json"
     private const val DAILY_INDEX_FILE = "daily_index.json"
+    private const val USER_PREFS = "user_prefs.json"
 
     private var context: Context? = null
 
     fun init(ctx: Context) {
         context = ctx
+    }
+
+    fun isLoggedIn(): Boolean {
+        return getAuthToken() != null
+    }
+
+    fun getAuthToken(): String? {
+        val file = getFile(USER_PREFS) ?: return null
+        if (!file.exists()) return null
+        val json = JSONObject(file.readText())
+        val token = json.optString("authToken", "")
+        return if (token.isEmpty()) null else token
+    }
+
+    fun saveAuth(email: String, token: String, patientId: String) {
+        val file = getFile(USER_PREFS) ?: return
+        val json = if (file.exists()) JSONObject(file.readText()) else JSONObject()
+        json.put("email", email)
+        json.put("authToken", token)
+        json.put("patientId", patientId)
+        file.writeText(json.toString())
+        ApiClient.setToken(token)
+    }
+
+    fun logout() {
+        val file = getFile(USER_PREFS) ?: return
+        if (file.exists()) {
+            val json = JSONObject(file.readText())
+            json.remove("authToken")
+            file.writeText(json.toString())
+        }
+        ApiClient.setToken(null)
+    }
+
+    fun getPatientId(): String? {
+        val file = getFile(USER_PREFS) ?: return null
+        if (!file.exists()) return null
+        val json = JSONObject(file.readText())
+        val id = json.optString("patientId", "")
+        return if (id.isEmpty()) null else id
+    }
+
+    fun setPatientId(id: String) {
+        val file = getFile(USER_PREFS) ?: return
+        val json = if (file.exists()) JSONObject(file.readText()) else JSONObject()
+        json.put("patientId", id)
+        file.writeText(json.toString())
+    }
+
+    fun logHealthStatus() {
+        val windows = getWindows()
+        val scores = getScores()
+        val hasBaseline = hasBaseline()
+        
+        Log.i(TAG, "========== GESTURGAIT MONITORING STATUS ==========")
+        Log.i(TAG, "Accessibility Service: ${if (com.example.gesturgaitai.service.MotorAccessibilityService.isRunning) "RUNNING" else "STOPPED"}")
+        Log.i(TAG, "Baseline Established: ${if (hasBaseline) "YES" else "NO"}")
+        Log.i(TAG, "Feature Windows Stored: ${windows.size}")
+        Log.i(TAG, "Recent Scores Stored: ${scores.size}")
+        if (windows.isNotEmpty()) {
+            val last = windows.last()
+            Log.i(TAG, "Last Feature Window: ts=${last.timestamp}, source=${last.source}")
+        }
+        Log.i(TAG, "===================================================")
     }
 
     private fun getFile(name: String) =

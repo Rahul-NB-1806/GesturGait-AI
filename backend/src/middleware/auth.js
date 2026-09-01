@@ -4,9 +4,8 @@ const User = require('../models/User');
 const JWT_SECRET = process.env.JWT_SECRET || 'gesturgait-dev-secret-change-in-production';
 
 function generateToken(user) {
-  return jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET, {
-    expiresIn: '7d',
-  });
+  // Removed 'expiresIn' so the user stays logged in indefinitely until manual logout
+  return jwt.sign({ userId: user._id, email: user.email }, JWT_SECRET);
 }
 
 async function authenticate(req, res, next) {

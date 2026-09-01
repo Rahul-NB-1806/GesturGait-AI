@@ -19,7 +19,8 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'Email already registered' });
     }
 
-    const user = new User({ email, passwordHash: password });
+    const patientId = `GG-${Math.floor(100000 + Math.random() * 900000)}`;
+    const user = new User({ email, passwordHash: password, patientId });
     await user.save();
 
     const token = generateToken(user);
@@ -28,6 +29,7 @@ router.post('/register', async (req, res) => {
       user: {
         _id: user._id,
         email: user.email,
+        patientId: user.patientId,
         baselineEstablished: user.baselineEstablished,
         baselineWindowDays: user.baselineWindowDays,
       },
@@ -60,6 +62,7 @@ router.post('/login', async (req, res) => {
       user: {
         _id: user._id,
         email: user.email,
+        patientId: user.patientId,
         baselineEstablished: user.baselineEstablished,
         baselineWindowDays: user.baselineWindowDays,
       },

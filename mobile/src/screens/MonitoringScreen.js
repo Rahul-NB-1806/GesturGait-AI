@@ -61,7 +61,9 @@ export default function MonitoringScreen() {
   }
 
   function handleWindowReady(window) {
+    console.log('[GesturGaitFeatures] Feature window received from native Android');
     const features = extractFeatures(window);
+    console.log('[GesturGaitFeatures] status=RECEIVED featureCount=' + Object.keys(features).length);
     const quality = checkDataQuality(window, features);
     setQualityResult(quality);
 

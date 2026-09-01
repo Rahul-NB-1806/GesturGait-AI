@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 
 object AccessibilityDataUploader {
 
-    private const val BASE_URL = "http://10.0.2.2:3000"
+    private val BASE_URL get() = com.example.gesturgaitai.network.NetworkConfig.BASE_URL
     private val JSON = "application/json".toMediaType()
 
     private val client = OkHttpClient.Builder()

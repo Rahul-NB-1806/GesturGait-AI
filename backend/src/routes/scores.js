@@ -6,81 +6,33 @@ const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-const ML_ENGINE_URL = process.env.ML_ENGINE_URL || 'http://localhost:8000';
-
-const FEATURE_KEYS = [
-  'stepCount', 'avgStepTime', 'peakFrequency',
-  'tremorFrequency', 'movementStability',
-];
-
-router.get('/:userId/today', authenticate, async (req, res) => {
+// Sync daily score from mobile app
+router.post('/sync', async (req, res) => {
   try {
-    const baseline = await Baseline.findOne({ userId: req.params.userId });
-    if (!baseline) {
-      return res.status(400).json({
-        message: 'Baseline not established yet',
-        score: null,
-      });
-    }
+    const { userId, date, score, confidence, stepCount, features, deviations, explanation, recommendation } = req.body;
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayWindows = await FeatureWindow.find({
-      userId: req.params.userId,
-      timestamp: { $gte: todayStart },
-    }).sort({ timestamp: -1 }).limit(100);
+    const riskScore = await RiskScore.findOneAndUpdate(
+      { userId, date },
+      {
+        score,
+        confidence,
+        stepCount,
+        features,
+        deviations,
+        explanation,
+        recommendation
+      },
+      { upsert: true, new: true }
+    );
 
-    if (todayWindows.length === 0) {
-      return res.status(400).json({
-        message: 'No feature data for today',
-        score: null,
-      });
-    }
-
-    const todayFeatures = {};
-    FEATURE_KEYS.forEach((key) => {
-      const values = todayWindows.map((w) => w.features[key]).filter((v) => v != null);
-      if (values.length > 0) {
-        todayFeatures[key] =
-          values.reduce((a, b) => a + b, 0) / values.length;
-      }
-    });
-
-    let scoreData;
-    try {
-      const mlResponse = await fetch(`${ML_ENGINE_URL}/score`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          baseline: {
-            featureAverages: baseline.featureAverages,
-            featureStdDev: baseline.featureStdDev,
-          },
-          todayFeatures,
-        }),
-      });
-      scoreData = await mlResponse.json();
-    } catch (e) {
-      scoreData = fallbackScore(baseline, todayFeatures);
-    }
-
-    const riskScore = new RiskScore({
-      userId: req.params.userId,
-      date: new Date(),
-      score: scoreData.score,
-      deviations: scoreData.deviations,
-      explanation: scoreData.explanation,
-      recommendation: scoreData.recommendation,
-    });
-    await riskScore.save();
-
-    res.json(riskScore);
+    res.json({ success: true, data: riskScore });
   } catch (err) {
-    res.status(500).json({ message: 'Failed to get score' });
+    console.error('Sync error:', err);
+    res.status(500).json({ message: 'Failed to sync score' });
   }
 });
 
-router.get('/:userId/history', authenticate, async (req, res) => {
+router.get('/:userId/history', async (req, res) => {
   try {
     const history = await RiskScore.find({ userId: req.params.userId })
       .sort({ date: -1 })
@@ -88,6 +40,16 @@ router.get('/:userId/history', authenticate, async (req, res) => {
     res.json({ history });
   } catch (err) {
     res.status(500).json({ message: 'Failed to get history' });
+  }
+});
+
+router.get('/:userId/latest', async (req, res) => {
+  try {
+    const latest = await RiskScore.findOne({ userId: req.params.userId })
+      .sort({ date: -1 });
+    res.json(latest);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to get latest score' });
   }
 });
 
