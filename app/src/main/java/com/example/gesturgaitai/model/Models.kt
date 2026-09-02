@@ -25,3 +25,8 @@ data class User(
     val email: String,
     val patientId: String
 )
+
+data class SummaryItem(
+    val label: String,
+    val avgScore: Int
+)
