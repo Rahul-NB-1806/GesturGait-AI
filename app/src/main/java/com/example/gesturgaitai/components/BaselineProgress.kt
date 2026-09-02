@@ -12,7 +12,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import com.example.gesturgaitai.ui.theme.*
 
 @Composable
@@ -28,10 +27,9 @@ fun BaselineProgress(
         label = "baseline"
     )
 
-    val isDark = MaterialTheme.colorScheme.background == SurfaceDark
-    val bgColor = if (isDark) MedicalBlueDarkBg else MedicalBlueLight
-    val fgColor = if (isDark) MedicalBlueDark else MedicalBlue
-    val trackColor = if (isDark) BorderDark else BorderLight
+    val bgColor = MedicalBlueLight
+    val fgColor = MedicalBlue
+    val trackColor = BorderLight
 
     Column(
         modifier = modifier

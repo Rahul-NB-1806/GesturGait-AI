@@ -59,6 +59,14 @@ object OfflineStorage {
         ApiClient.setToken(null)
     }
 
+    fun clearAllMlData() {
+        getFile(BASELINE_FILE)?.delete()
+        getFile(SCORES_FILE)?.delete()
+        getFile(WINDOWS_FILE)?.delete()
+        getFile(DAILY_INDEX_FILE)?.delete()
+        Log.i(TAG, "All ML data (baseline, scores, windows) has been reset.")
+    }
+
     fun getPatientId(): String? {
         val file = getFile(USER_PREFS) ?: return null
         if (!file.exists()) return null

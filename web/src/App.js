@@ -201,38 +201,38 @@ function Dashboard() {
       );
     }
 
-    if (data) {
+    if (data || !loading) {
       return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <StatCard
                 title="Neurological Score"
-                value={data.score}
-                sub={`Last: ${data.date}`}
+                value={data?.score || '--'}
+                sub={data?.date ? `Last: ${data.date}` : 'No data available'}
                 icon={<Brain className="w-6 h-6" />}
                 color="blue"
               />
               <StatCard
                 title="Model Confidence"
-                value={`${parseFloat(data.confidence || 0).toFixed(2)}%`}
+                value={data?.confidence ? `${parseFloat(data.confidence).toFixed(2)}%` : '--'}
                 sub="Inference Reliability"
                 icon={<ShieldCheck className="w-6 h-6" />}
                 color="emerald"
               />
               <StatCard
                 title="Daily Activity"
-                value={data.stepCount}
+                value={data?.stepCount || '--'}
                 sub="Steps Walked"
                 icon={<Footprints className="w-6 h-6" />}
                 color="amber"
               />
               <StatCard
                 title="Clinical Status"
-                value={data.score > 60 ? 'ALERT' : 'STABLE'}
+                value={data?.score ? (data.score > 60 ? 'ALERT' : 'STABLE') : '--'}
                 sub="Deviation Check"
                 icon={<Activity className="w-6 h-6" />}
-                color={data.score > 60 ? 'rose' : 'slate'}
+                color={data?.score > 60 ? 'rose' : 'slate'}
               />
             </div>
 
@@ -252,31 +252,37 @@ function Dashboard() {
                 <p className="text-slate-400 text-sm font-medium mb-8">90-Day Longitudinal Observations</p>
 
                 <div className="h-[320px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={history}>
-                      <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" hide />
-                      <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        content={<CustomTooltip />}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="score"
-                        stroke="#2563eb"
-                        strokeWidth={4}
-                        fillOpacity={1}
-                        fill="url(#colorScore)"
-                        animationDuration={1500}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {history.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={history}>
+                        <defs>
+                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="date" hide />
+                        <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip
+                          content={<CustomTooltip />}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="score"
+                          stroke="#2563eb"
+                          strokeWidth={4}
+                          fillOpacity={1}
+                          fill="url(#colorScore)"
+                          animationDuration={1500}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center border border-dashed border-slate-200">
+                      <p className="text-slate-400 font-medium">No history data available</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -286,11 +292,13 @@ function Dashboard() {
                    <div className="relative z-10">
                       <h3 className="text-lg font-bold font-jakarta mb-4 opacity-80 uppercase tracking-widest text-[10px]">AI Interpretation</h3>
                       <p className="text-lg font-medium leading-relaxed mb-6 italic">
-                        "{data.explanation}"
+                        {data?.explanation ? `"${data.explanation}"` : "Waiting for analysis..."}
                       </p>
                       <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10">
                          <h4 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-2">Recommendation</h4>
-                         <p className="text-sm font-medium text-blue-200">{data.recommendation}</p>
+                         <p className="text-sm font-medium text-blue-200">
+                           {data?.recommendation || "No recommendation available at this time."}
+                         </p>
                       </div>
                    </div>
                    <Brain className="absolute -bottom-8 -right-8 w-40 h-40 opacity-5 text-white" />
@@ -302,7 +310,7 @@ function Dashboard() {
                      <span className="text-[10px] font-bold text-slate-400">VS BASELINE</span>
                    </h3>
                    <div className="space-y-4">
-                     {data.deviations?.map((dev, i) => (
+                     {data?.deviations && data.deviations.length > 0 ? data.deviations.map((dev, i) => (
                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                          <span className="text-sm font-bold text-slate-600">{dev.feature}</span>
                          <div className={`flex items-center gap-1.5 font-bold text-sm ${dev.direction === 'worse' ? 'text-rose-500' : 'text-emerald-500'}`}>
@@ -310,7 +318,11 @@ function Dashboard() {
                            {Math.abs(dev.deltaPercent)}%
                          </div>
                        </div>
-                     ))}
+                     )) : (
+                       <div className="p-3 bg-slate-50 rounded-xl text-center">
+                         <span className="text-xs font-bold text-slate-400 italic">No deviations detected</span>
+                       </div>
+                     )}
                    </div>
                 </div>
               </div>
@@ -365,7 +377,6 @@ function Dashboard() {
             label="Clinical Alerts"
             active={activeTab === 'Clinical Alerts'}
             onClick={() => setActiveTab('Clinical Alerts')}
-            badge="2"
           />
         </nav>
 

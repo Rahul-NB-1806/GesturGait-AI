@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.*
 import com.example.gesturgaitai.core.InferenceEngine
 import com.example.gesturgaitai.core.OfflineStorage
 import com.example.gesturgaitai.navigation.AppNavigation
@@ -18,14 +16,8 @@ class MainActivity : ComponentActivity() {
         InferenceEngine.initialize(this)
         enableEdgeToEdge()
         setContent {
-            val systemDark = isSystemInDarkTheme()
-            var isDarkMode by remember { mutableStateOf(systemDark) }
-
-            GesturGaitAITheme(darkTheme = isDarkMode) {
-                AppNavigation(
-                    isDarkMode = isDarkMode,
-                    onToggleDarkMode = { isDarkMode = !isDarkMode }
-                )
+            GesturGaitAITheme {
+                AppNavigation()
             }
         }
     }

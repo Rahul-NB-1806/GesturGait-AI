@@ -1,6 +1,7 @@
 package com.example.gesturgaitai.screens
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TouchApp
@@ -108,7 +110,13 @@ fun AccessibilityTutorialScreen(onDone: () -> Unit) {
                     description = "Turn on the main switch. We never collect typed text or private messages."
                 )
 
-                Spacer(Modifier.weight(1f))
+                TutorialStep(
+                    number = "4",
+                    icon = Icons.Default.BatteryFull,
+                    title = "Background Activity",
+                    description = "Change battery settings to 'No Restrictions' so monitoring can run 24/7."
+                )
+
                 Spacer(Modifier.height(40.dp))
 
                 Button(
@@ -122,9 +130,27 @@ fun AccessibilityTutorialScreen(onDone: () -> Unit) {
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Grant Permission", fontWeight = FontWeight.Bold)
+                    Text("Grant Accessibility", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(8.dp))
                     Icon(Icons.Default.ArrowForward, null)
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:${context.packageName}")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Allow Background Use", fontWeight = FontWeight.Bold)
                 }
 
                 TextButton(

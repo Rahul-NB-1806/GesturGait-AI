@@ -1,6 +1,5 @@
 package com.example.gesturgaitai.screens
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -112,12 +111,16 @@ fun DashboardScreen() {
                 },
                 actions = {
                     IconButton(onClick = { loadData() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(
+                            Icons.Default.Refresh, 
+                            contentDescription = "Refresh", 
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = Color.Transparent,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                 )
             )
         }
@@ -169,7 +172,7 @@ fun DashboardScreen() {
                     Icon(
                         Icons.AutoMirrored.Filled.DirectionsWalk,
                         contentDescription = null,
-                        tint = if (isSystemInDarkTheme()) Color(0xFF0A84FF) else Color(0xFF007AFF),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(Modifier.height(12.dp))

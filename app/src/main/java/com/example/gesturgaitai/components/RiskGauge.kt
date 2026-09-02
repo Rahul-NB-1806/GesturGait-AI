@@ -38,7 +38,7 @@ fun RiskGauge(
         score < 65 -> "Elevated"
         else -> "High"
     }
-    val gaugeTrack = if (MaterialTheme.colorScheme.background == SurfaceLight) GaugeTrackLight else GaugeTrackDark
+    val gaugeTrack = GaugeTrackLight
     val progress = if (score != null) score.coerceIn(0, 100) / 100f else 0f
     val sweepAngle = 270f * progress
     val startAngle = 135f

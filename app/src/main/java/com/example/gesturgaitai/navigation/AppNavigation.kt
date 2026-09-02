@@ -2,7 +2,6 @@ package com.example.gesturgaitai.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,7 +42,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
 val screens = listOf(Screen.Dashboard, Screen.Monitor, Screen.History, Screen.Settings)
 
 @Composable
-fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
+fun AppNavigation() {
     var isUserLoggedIn by remember { mutableStateOf(OfflineStorage.isLoggedIn()) }
 
     if (!isUserLoggedIn) {
@@ -56,13 +55,11 @@ fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val isDark = isSystemInDarkTheme()
 
     AppleBackground {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                // Floating Apple-style Glass Navigation Bar
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -73,23 +70,19 @@ fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                     Surface(
                         modifier = Modifier
                             .height(64.dp)
-                            .fillMaxWidth(0.95f), // Slightly narrower for floating look
+                            .fillMaxWidth(0.95f),
                         color = Color.Transparent,
                         shape = RoundedCornerShape(32.dp),
                         border = androidx.compose.foundation.BorderStroke(
                             0.5.dp, 
-                            Color.White.copy(alpha = if (isDark) 0.15f else 0.3f)
+                            Color.White.copy(alpha = 0.3f)
                         )
                     ) {
                         Box(
                             modifier = Modifier
                                 .background(
                                     brush = Brush.verticalGradient(
-                                        colors = if (isDark) {
-                                            listOf(Color.White.copy(alpha = 0.08f), Color.White.copy(alpha = 0.03f))
-                                        } else {
-                                            listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.7f))
-                                        }
+                                        colors = listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.7f))
                                     )
                                 )
                                 .fillMaxSize()
@@ -101,8 +94,8 @@ fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                             ) {
                                 screens.forEach { screen ->
                                     val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                                    val activeColor = if (isDark) Color(0xFF0A84FF) else Color(0xFF007AFF)
-                                    val inactiveColor = if (isDark) Color.White.copy(alpha = 0.5f) else Color.Black.copy(alpha = 0.4f)
+                                    val activeColor = Color(0xFF007AFF)
+                                    val inactiveColor = Color.Black.copy(alpha = 0.4f)
 
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -137,7 +130,6 @@ fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                 }
             }
         ) { innerPadding ->
-            // Apply innerPadding correctly to the NavHost
             NavHost(
                 navController = navController,
                 startDestination = Screen.Dashboard.route,
@@ -155,8 +147,6 @@ fun AppNavigation(isDarkMode: Boolean, onToggleDarkMode: () -> Unit) {
                 }
                 composable(Screen.Settings.route) {
                     SettingsScreen(
-                        isDarkMode = isDarkMode,
-                        onToggleDarkMode = onToggleDarkMode,
                         onLogout = { isUserLoggedIn = false }
                     )
                 }
