@@ -1,5 +1,5 @@
 const express = require('express');
-const FeatureWindow = require('../models/FeatureWindow');
+const FeatureWindow = require('../models/featurewindow');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();

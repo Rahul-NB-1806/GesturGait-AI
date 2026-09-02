@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const RiskScore = require('./models/RiskScore');
+const RiskScore = require('./models/riskscore');
 require('dotenv').config();
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/gesturgait';

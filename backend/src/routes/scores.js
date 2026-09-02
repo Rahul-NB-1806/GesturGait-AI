@@ -1,7 +1,7 @@
 const express = require('express');
-const FeatureWindow = require('../models/FeatureWindow');
-const Baseline = require('../models/Baseline');
-const RiskScore = require('../models/RiskScore');
+const FeatureWindow = require('../models/featurewindow');
+const Baseline = require('../models/baseline');
+const RiskScore = require('../models/riskscore');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();

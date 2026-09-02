@@ -10,7 +10,7 @@
 local.properties
 
 # AI Coding & Skills
-AI-skills/
+AI-skills
 .opencode/
 .claude/
 AGENTS.md
