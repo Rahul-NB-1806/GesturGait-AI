@@ -79,12 +79,13 @@ object ApiClient {
         }
     }
 
-    suspend fun register(email: String, password: String): AuthResponse = withContext(Dispatchers.IO) {
+    suspend fun register(email: String, password: String, deviceId: String): AuthResponse = withContext(Dispatchers.IO) {
         try {
             android.util.Log.d("GesturGaitFeatures", "Attempting registration for: $email at $BASE_URL")
             val json = JSONObject().apply {
                 put("email", email)
                 put("password", password)
+                put("deviceId", deviceId)
             }
             val request = Request.Builder()
                 .url("$BASE_URL/auth/register")

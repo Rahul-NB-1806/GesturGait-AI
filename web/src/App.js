@@ -8,7 +8,7 @@ import {
   LogOut, LayoutDashboard, Database, ShieldCheck, Bell
 } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000'; // Web uses localhost usually, or can use Tunnel too
+const API_BASE = process.env.REACT_APP_API_URL || 'https://gesturgait-ai.onrender.com';
 
 const AuthContext = createContext(null);
 
@@ -141,7 +141,9 @@ function LoginScreen() {
 
 function Dashboard() {
   const { user, logout } = useContext(AuthContext);
-  const [patientId, setPatientId] = useState('GG-8F42K91');
+  const [activeTab, setActiveTab] = useState('Patient Analysis');
+  // Auto-fill patientId from the logged-in user object
+  const [patientId, setPatientId] = useState(user?.user?.patientId || '');
   const [data, setData] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -161,7 +163,7 @@ function Dashboard() {
       setData(latestData);
       setHistory(historyData.history?.reverse() || []);
     } catch (err) {
-      setError(`Connection Error: ${err.message}. Ensure backend is running on port 5000.`);
+      setError(`Connection Error: ${err.message}. Ensure backend is running.`);
       console.error(err);
     } finally {
       setLoading(false);
@@ -169,80 +171,39 @@ function Dashboard() {
   }, [patientId]);
 
   useEffect(() => {
-    fetchData();
+    if (patientId) {
+      fetchData();
+    }
   }, [fetchData]);
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
-      {/* Sidebar */}
-      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col sticky top-0 h-screen z-20">
-        <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100">
-            <Activity className="text-white w-6 h-6" />
+  const renderContent = () => {
+    if (activeTab !== 'Patient Analysis') {
+      return (
+        <div className="flex flex-col items-center justify-center py-40 border-2 border-dashed border-slate-200 rounded-[3rem]">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+            <ShieldCheck className="w-8 h-8 text-blue-400" />
           </div>
-          <h1 className="text-xl font-extrabold font-jakarta tracking-tight">GesturGait <span className="text-blue-600">AI</span></h1>
+          <h3 className="text-xl font-bold text-slate-800">{activeTab}</h3>
+          <p className="text-slate-400 font-medium text-center mt-2">
+            This module is being initialized with your clinical data.<br/>
+            Please check back shortly.
+          </p>
         </div>
+      );
+    }
 
-        <nav className="flex-1 px-4 space-y-2">
-          <NavItem icon={<LayoutDashboard className="w-5 h-5" />} label="Patient Analysis" active />
-          <NavItem icon={<Database className="w-5 h-5" />} label="Data Repository" />
-          <NavItem icon={<Brain className="w-5 h-5" />} label="AI Models" />
-          <NavItem icon={<Bell className="w-5 h-5" />} label="Clinical Alerts" badge="2" />
-        </nav>
-
-        <div className="p-4 mt-auto">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
-             <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                  <User className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                   <p className="text-xs font-bold text-slate-900 truncate max-w-[140px]">{user.user.email}</p>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase">Researcher</p>
-                </div>
-             </div>
-             <button
-              onClick={logout}
-              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-all"
-             >
-               <LogOut className="w-3.5 h-3.5" /> Sign Out
-             </button>
-          </div>
+    if (loading) {
+      return (
+        <div className="flex flex-col items-center justify-center py-40">
+           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="mt-4 text-slate-500 font-bold">Querying Clinical Database...</p>
         </div>
-      </aside>
+      );
+    }
 
-      <main className="flex-1 p-8">
-        <header className="flex items-center justify-between mb-10">
-          <div>
-            <h2 className="text-2xl font-extrabold font-jakarta text-slate-900 tracking-tight">Clinical Insights</h2>
-            <p className="text-slate-500 font-medium">Monitoring longitudinal Parkinson's markers</p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="relative w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-              <input
-                type="text"
-                value={patientId}
-                onChange={(e) => setPatientId(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && fetchData()}
-                placeholder="Search Patient ID..."
-                className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 shadow-sm transition-all font-medium"
-              />
-            </div>
-            <button onClick={fetchData} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
-              Update
-            </button>
-          </div>
-        </header>
-
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-40">
-             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-             <p className="mt-4 text-slate-500 font-bold">Querying Clinical Database...</p>
-          </div>
-        ) : data ? (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    if (data) {
+      return (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <StatCard
@@ -254,7 +215,7 @@ function Dashboard() {
               />
               <StatCard
                 title="Model Confidence"
-                value={`${data.confidence}%`}
+                value={`${parseFloat(data.confidence || 0).toFixed(2)}%`}
                 sub="Inference Reliability"
                 icon={<ShieldCheck className="w-6 h-6" />}
                 color="emerald"
@@ -355,23 +316,116 @@ function Dashboard() {
               </div>
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-40 border-2 border-dashed border-slate-200 rounded-[3rem]">
-             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
-               <Search className="w-8 h-8 text-slate-300" />
-             </div>
-             <p className="text-slate-400 font-bold text-lg">Enter a Patient ID to generate analysis</p>
-             <p className="text-slate-300 text-sm mt-1">Example: GG-8F42K91</p>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center justify-center py-40 border-2 border-dashed border-slate-200 rounded-[3rem]">
+         <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+           <Search className="w-8 h-8 text-slate-300" />
+         </div>
+         <p className="text-slate-400 font-bold text-lg">Enter a Patient ID to generate analysis</p>
+         <p className="text-slate-300 text-sm mt-1">Example: GG-8F42K91</p>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f8fafc] flex">
+      {/* Sidebar */}
+      <aside className="w-72 bg-white border-r border-slate-200 flex flex-col sticky top-0 h-screen z-20">
+        <div className="p-8 flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100">
+            <Activity className="text-white w-6 h-6" />
           </div>
-        )}
+          <h1 className="text-xl font-extrabold font-jakarta tracking-tight">GesturGait <span className="text-blue-600">AI</span></h1>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2">
+          <NavItem
+            icon={<LayoutDashboard className="w-5 h-5" />}
+            label="Patient Analysis"
+            active={activeTab === 'Patient Analysis'}
+            onClick={() => setActiveTab('Patient Analysis')}
+          />
+          <NavItem
+            icon={<Database className="w-5 h-5" />}
+            label="Data Repository"
+            active={activeTab === 'Data Repository'}
+            onClick={() => setActiveTab('Data Repository')}
+          />
+          <NavItem
+            icon={<Brain className="w-5 h-5" />}
+            label="AI Models"
+            active={activeTab === 'AI Models'}
+            onClick={() => setActiveTab('AI Models')}
+          />
+          <NavItem
+            icon={<Bell className="w-5 h-5" />}
+            label="Clinical Alerts"
+            active={activeTab === 'Clinical Alerts'}
+            onClick={() => setActiveTab('Clinical Alerts')}
+            badge="2"
+          />
+        </nav>
+
+        <div className="p-4 mt-auto">
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
+             <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                  <User className="w-4 h-4 text-blue-600" />
+                </div>
+                <div>
+                   <p className="text-xs font-bold text-slate-900 truncate max-w-[140px]">{user?.user?.email}</p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase">Researcher</p>
+                </div>
+             </div>
+             <button
+              onClick={logout}
+              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-all"
+             >
+               <LogOut className="w-3.5 h-3.5" /> Sign Out
+             </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 p-8">
+        <header className="flex items-center justify-between mb-10">
+          <div>
+            <h2 className="text-2xl font-extrabold font-jakarta text-slate-900 tracking-tight">Clinical Insights</h2>
+            <p className="text-slate-500 font-medium">Monitoring longitudinal Parkinson's markers</p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="relative w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                value={patientId}
+                readOnly
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm text-slate-500 shadow-sm transition-all font-medium cursor-not-allowed"
+                placeholder="Patient ID..."
+              />
+            </div>
+            <button onClick={fetchData} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+              Refresh
+            </button>
+          </div>
+        </header>
+
+        {renderContent()}
       </main>
     </div>
   );
 }
 
-function NavItem({ icon, label, active, badge }) {
+function NavItem({ icon, label, active, badge, onClick }) {
   return (
-    <div className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}>
+    <div
+      onClick={onClick}
+      className={`flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition-all ${active ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
+    >
       <div className="flex items-center gap-3">
         {icon}
         <span className="font-bold text-sm">{label}</span>

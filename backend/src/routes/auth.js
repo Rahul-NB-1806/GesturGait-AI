@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password required' });
     }
@@ -19,7 +19,18 @@ router.post('/register', async (req, res) => {
       return res.status(409).json({ message: 'Email already registered' });
     }
 
-    const patientId = `GG-${Math.floor(100000 + Math.random() * 900000)}`;
+    // Generate Patient ID based on Device ID if provided, otherwise random
+    let patientId;
+    if (deviceId && deviceId !== 'unknown') {
+      // Create a 6-digit numeric ID from the hash of the device ID
+      const crypto = require('crypto');
+      const hash = crypto.createHash('md5').update(deviceId).digest('hex');
+      const numericPart = parseInt(hash.substring(0, 8), 16) % 900000 + 100000;
+      patientId = `GG-${numericPart}`;
+    } else {
+      patientId = `GG-${Math.floor(100000 + Math.random() * 900000)}`;
+    }
+
     const user = new User({ email, passwordHash: password, patientId });
     await user.save();
 

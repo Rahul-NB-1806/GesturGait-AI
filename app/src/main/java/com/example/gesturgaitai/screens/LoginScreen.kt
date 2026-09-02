@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.provider.Settings
 import com.example.gesturgaitai.components.AppleBackground
 import com.example.gesturgaitai.components.GlassCard
 import com.example.gesturgaitai.core.OfflineStorage
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onLoginSuccess: (String, String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -128,7 +130,11 @@ fun LoginScreen(
                             scope.launch {
                                 try {
                                     val response = if (isRegistering) {
-                                        ApiClient.register(email, password)
+                                        val deviceId = Settings.Secure.getString(
+                                            context.contentResolver,
+                                            Settings.Secure.ANDROID_ID
+                                        ) ?: "unknown"
+                                        ApiClient.register(email, password, deviceId)
                                     } else {
                                         ApiClient.login(email, password)
                                     }
