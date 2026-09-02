@@ -11,6 +11,7 @@ local.properties
 
 # AI Coding & Skills
 AI-skills
+AI-skills/
 .opencode/
 .claude/
 AGENTS.md
@@ -38,13 +39,22 @@ build/
 *.pkl
 *.joblib
 data/
-models/
+/models/
 
-# Node
+# Node & Web
 node_modules/
+web/node_modules/
+web/build/
+package-lock.json
+web/package-lock.json
 
 # Logs
 *.log
+backend_output.log
+backend_run.log
+server.log
+server_error.log
 
 # Backend secrets
 backend/.env
+backend/.env.local
