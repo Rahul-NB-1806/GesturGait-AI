@@ -50,7 +50,6 @@ object DeviationEngine {
 
             val zScore: Double
             val direction: String
-            val isBetter : Boolean
 
             if (std != null && std > 0.0) {
                 zScore = (value - mean) / std
@@ -61,10 +60,8 @@ object DeviationEngine {
             // For most features, increase = worse (except stepCount where more steps = better)
             if (key == "stepCount" || key == "tapCount") {
                 direction = if (deltaPercent < -10) "worse" else "better"
-                isBetter = deltaPercent >= -10
             } else {
                 direction = if (deltaPercent > 10) "worse" else "better"
-                isBetter = deltaPercent <= 10
             }
 
             val weight = FEATURE_WEIGHTS[key] ?: 1.0

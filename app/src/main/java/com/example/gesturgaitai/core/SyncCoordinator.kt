@@ -4,6 +4,7 @@ import com.example.gesturgaitai.network.ApiClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -76,15 +77,17 @@ object SyncCoordinator {
                 OfflineStorage.saveBaseline(newBaseline)
             }
 
-            onResult(
-                SyncState(
-                    inferenceResult = finalInferenceResult,
-                    baseline = finalBaseline,
-                    dailySteps = dailySteps,
-                    baselineDays = baselineDays,
-                    dailyGroups = dailyGroups
+            withContext(Dispatchers.Main) {
+                onResult(
+                    SyncState(
+                        inferenceResult = finalInferenceResult,
+                        baseline = finalBaseline,
+                        dailySteps = dailySteps,
+                        baselineDays = baselineDays,
+                        dailyGroups = dailyGroups
+                    )
                 )
-            )
+            }
         }
     }
 

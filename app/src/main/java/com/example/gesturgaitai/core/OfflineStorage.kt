@@ -19,6 +19,8 @@ object OfflineStorage {
 
     fun init(ctx: Context) {
         context = ctx
+        // Restore auth token on init
+        getAuthToken()?.let { ApiClient.setToken(it) }
     }
 
     fun isLoggedIn(): Boolean {
@@ -28,9 +30,13 @@ object OfflineStorage {
     fun getAuthToken(): String? {
         val file = getFile(USER_PREFS) ?: return null
         if (!file.exists()) return null
-        val json = JSONObject(file.readText())
-        val token = json.optString("authToken", "")
-        return if (token.isEmpty()) null else token
+        return try {
+            val json = JSONObject(file.readText())
+            val token = json.optString("authToken", "")
+            if (token.isEmpty()) null else token
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun saveAuth(email: String, token: String, patientId: String) {
@@ -56,9 +62,13 @@ object OfflineStorage {
     fun getPatientId(): String? {
         val file = getFile(USER_PREFS) ?: return null
         if (!file.exists()) return null
-        val json = JSONObject(file.readText())
-        val id = json.optString("patientId", "")
-        return if (id.isEmpty()) null else id
+        return try {
+            val json = JSONObject(file.readText())
+            val id = json.optString("patientId", "")
+            if (id.isEmpty()) null else id
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun setPatientId(id: String) {

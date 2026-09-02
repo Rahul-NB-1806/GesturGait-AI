@@ -16,20 +16,15 @@ object ApiClient {
     private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(10, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS) // Wait 60s for Render to wake up
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private var authToken: String? = null
 
     fun setToken(token: String?) {
         authToken = token
-    }
-
-    private fun buildRequest(path: String): Request {
-        val builder = Request.Builder().url("$BASE_URL$path")
-        authToken?.let { builder.addHeader("Authorization", "Bearer $it") }
-        return builder.build()
     }
 
     suspend fun login(email: String, password: String): AuthResponse = withContext(Dispatchers.IO) {
@@ -43,6 +38,8 @@ object ApiClient {
                 .url("$BASE_URL/auth/login")
                 .post(json.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
+            
+            android.util.Log.d("GesturGaitFeatures", "Requesting: ${request.url}")
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: ""
             
@@ -64,7 +61,7 @@ object ApiClient {
                 val userJson = obj.getJSONObject("user")
                 AuthResponse(
                     token = obj.getString("token"),
-                    user = com.example.gesturgaitai.model.User(
+                    user = User(
                         _id = userJson.getString("_id"),
                         email = userJson.getString("email"),
                         patientId = userJson.optString("patientId", "")
@@ -93,6 +90,8 @@ object ApiClient {
                 .url("$BASE_URL/auth/register")
                 .post(json.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
+                
+            android.util.Log.d("GesturGaitFeatures", "Requesting: ${request.url}")
             val response = client.newCall(request).execute()
             val body = response.body?.string() ?: ""
             
@@ -105,7 +104,7 @@ object ApiClient {
 
             val obj = try {
                 JSONObject(body)
-            } catch (e: Exception) {
+            } catch (jsone: Exception) {
                 android.util.Log.e("GesturGaitFeatures", "JSON Parse Error. Body was: $body")
                 return@withContext AuthResponse(null, null, "Server returned invalid data")
             }
@@ -114,7 +113,7 @@ object ApiClient {
                 val userJson = obj.getJSONObject("user")
                 AuthResponse(
                     token = obj.getString("token"),
-                    user = com.example.gesturgaitai.model.User(
+                    user = User(
                         _id = userJson.getString("_id"),
                         email = userJson.getString("email"),
                         patientId = userJson.optString("patientId", "")
@@ -180,77 +179,4 @@ object ApiClient {
             false
         }
     }
-
-    suspend fun getTodayScore(userId: String): ScoreResponse = withContext(Dispatchers.IO) {
-        val request = buildRequest("/score/$userId/today")
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: "{}"
-        val json = JSONObject(body)
-        ScoreResponse(
-            score = if (json.has("score") && !json.isNull("score")) json.getInt("score") else null,
-            deviations = null,
-            explanation = json.optString("explanation", null),
-            recommendation = json.optString("recommendation", null),
-            message = json.optString("message", null)
-        )
-    }
-
-    suspend fun getScoreHistory(userId: String): List<ScoreResponse> = withContext(Dispatchers.IO) {
-        val request = buildRequest("/score/$userId/history")
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: "{}"
-        val json = JSONObject(body)
-        val arr = json.optJSONArray("history") ?: return@withContext emptyList()
-        (0 until arr.length()).map { i ->
-            val item = arr.getJSONObject(i)
-            val devArr = item.optJSONArray("deviations")
-            val deviations = if (devArr != null) {
-                (0 until devArr.length()).map { d ->
-                    val dev = devArr.getJSONObject(d)
-                    Deviation(dev.getString("feature"), dev.getDouble("deltaPercent"), dev.getString("direction"))
-                }
-            } else null
-            ScoreResponse(
-                score = if (item.has("score") && !item.isNull("score")) item.getInt("score") else null,
-                deviations = deviations,
-                explanation = item.optString("explanation", null),
-                recommendation = item.optString("recommendation", null),
-                message = null
-            )
-        }
-    }
-
-    suspend fun getScoreSummary(userId: String, period: String): SummaryResponse = withContext(Dispatchers.IO) {
-        val request = buildRequest("/score/$userId/summary?period=$period")
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: "{}"
-        val json = JSONObject(body)
-        val arr = json.optJSONArray("data") ?: emptyJsonArray()
-        val items = (0 until arr.length()).map { i ->
-            val item = arr.getJSONObject(i)
-            SummaryItem(
-                label = item.getString("label"),
-                avgScore = item.getInt("avgScore"),
-                minScore = item.getInt("minScore"),
-                maxScore = item.getInt("maxScore"),
-                scoreCount = item.getInt("scoreCount")
-            )
-        }
-        SummaryResponse(period = json.getString("period"), data = items)
-    }
-
-    suspend fun getBaseline(userId: String): BaselineResponse = withContext(Dispatchers.IO) {
-        val request = buildRequest("/baseline/$userId")
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: "{}"
-        val json = JSONObject(body)
-        BaselineResponse(
-            establishedAt = json.optString("establishedAt", null),
-            daysCollected = json.optInt("daysCollected", -1).let { if (it < 0) null else it },
-            daysRequired = json.optInt("daysRequired", -1).let { if (it < 0) null else it },
-            message = json.optString("message", null)
-        )
-    }
-
-    private fun emptyJsonArray(): org.json.JSONArray = org.json.JSONArray()
 }

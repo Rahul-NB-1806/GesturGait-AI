@@ -14,7 +14,7 @@ object NetworkConfig {
     private const val PORT = "5000"
     
     // CHANGE THIS to your public tunnel URL
-    private const val PUBLIC_URL = "https://wise-fox-73.loca.lt"
+    private const val PUBLIC_URL = "https://gesturgait-ai.onrender.com"
     
     // Set to true to use the Public URL (works on 5G/different Wi-Fi)
     // Set to false to use the Local Wi-Fi (only works on same Wi-Fi)

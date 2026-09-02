@@ -22,11 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.*
 import com.example.gesturgaitai.components.*
 import com.example.gesturgaitai.core.OfflineStorage
-import com.example.gesturgaitai.core.UnifiedFeatureWindow
-import com.example.gesturgaitai.sensor.MotionSensorManager
-import com.example.gesturgaitai.sensor.SensorFeatureExtractor
 import com.example.gesturgaitai.service.AccessibilityFeatureExtractor
-import com.example.gesturgaitai.service.MotorAccessibilityService
 import com.example.gesturgaitai.service.OemBatteryOptimization
 import kotlinx.coroutines.delay
 

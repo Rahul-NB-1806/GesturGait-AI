@@ -14,30 +14,6 @@ data class Deviation(
     val direction: String
 )
 
-data class HistoryResponse(
-    val history: List<ScoreResponse>?
-)
-
-data class SummaryResponse(
-    val period: String,
-    val data: List<SummaryItem>
-)
-
-data class SummaryItem(
-    val label: String,
-    val avgScore: Int,
-    val minScore: Int,
-    val maxScore: Int,
-    val scoreCount: Int
-)
-
-data class BaselineResponse(
-    val establishedAt: String?,
-    val daysCollected: Int?,
-    val daysRequired: Int?,
-    val message: String?
-)
-
 data class AuthResponse(
     val token: String?,
     val user: User?,
