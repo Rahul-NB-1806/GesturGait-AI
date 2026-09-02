@@ -121,7 +121,8 @@ object ApiClient {
                     message = null
                 )
             } else {
-                val msg = obj.optString("message", "Registration failed")
+                // Return the actual error message from the server (e.g. "Email already registered")
+                val msg = obj.optString("error", obj.optString("message", "Registration failed"))
                 android.util.Log.e("GesturGaitFeatures", "Registration failed: $msg")
                 AuthResponse(null, null, msg)
             }
